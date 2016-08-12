@@ -24,66 +24,40 @@ end：一个规则定义的结束标记
 结果语句（then后的语句）：结果语句可以重新对用户输入数据赋值，也可以调用用户自定义函数。重新赋值语法为：$绑定变量(成员=新值,…)；如：$user:card(name=newName,id=$newid)。调用自定义函数的语法为：call(函数/方法名,参数一，参数二…)，如果要调用的是自定义的某个类的方法，如以->连接类名和方法名。如call(ClassName->method, $user:card,1);如上示例，参数可以是一个新的绑定变量。当前结果语句可以引用前一个结果语句赋值的绑定变量。
 结果语句赋值时支持运算符”+ - * / %” 以及字符串连接符 “.” ，字符串连接符仅支持两个变量的连接。
 代码示例：warehouse.drl
-`
-//分快递
-rule AssignExpress
-when
-    $address contains 北京   or $address contains 北京市;$user:card(name==zhangtao,id not memberof $userids);
-then
-    $user:card(name=tony,id=new);call(TestCommand->doTest15, $user:card,1,haha);
-end
 
-#分仓库
-rule AssignWarehouse
-when
-    $user(name==zhangtao,);$order(goods_amount>100)
- then
-    $order(mihome_id=120)
-end
-`
+    //分快递
+    rule AssignExpress 
+    when
+        $address contains 北京   or $address contains 北京市;$user:card(name==zhangtao,id not memberof $userids);
+    then
+        $user:card(name=tony,id=new);call(TestCommand->doTest15, $user:card,1,haha);
+    end
+    #分仓库
+    rule AssignWarehouse
+    when
+        $user(name==zhangtao,);$order(goods_amount>100)
+    then
+        $order(mihome_id=120)
+    end
 
 3.操作符
 此规则引擎支持以下操作符：
-操作符
-说明
-备注
-==
-等于
-
->
-大于
-
-<
-小于
-
->=
-大于等于
-
-<=
-小于等于
-
-!=
-不等于
-
-Memberof
-属于
-操作对象可以是数组，对象或字符串
-Not memberof
-不属于
-操作对象可以是数组，对象或字符串
-Contains
-包含
-操作对象可以是数组，对象或字符串
-Not contains
-不包含
-操作对象可以是数组，对象或字符串
-=
-赋值
-仅在结果语句中使用
+操作符        说明        备注
+==            等于    
+>             大于
+<             小于
+>=            大于等于
+<=            小于等于
+!=            不等于
+Memberof      属于        操作对象可以是数组，对象或字符串
+Not memberof  不属于  操作对象可以是数组，对象或字符串
+Contains      包含    操作对象可以是数组，对象或字符串
+Not contains  不包含  操作对象可以是数组，对象或字符串
+=             赋值    仅在结果语句中使用
 
 
 4.错误码定义
-$errorsCode = 【
+    $errorsCode = 【
         '41000' => 'Data\'s key is not exists',
         '41001' => 'Value is not an array',
         '41002' => 'Rule file format error:Rule name is not difined',
@@ -94,67 +68,66 @@ $errorsCode = 【
 
 ##二、使用入门
 首先需要引用规则引擎类，对于x5项目，如下
-x5()->import("lib/Rules.php");
-$r = new Rules();
+    x5()->import("lib/Rules.php");
+    $r = new Rules();
 
 非x5项目，可以
-include “Rules.php”;
-$r = new Rules();
+    include “Rules.php”;
+    $r = new Rules();
 
 接下来：初始化规则文件
-$r->initRulesMap("warehouse.drl");
+    $r->initRulesMap("warehouse.drl");
 然后，输入要判断的数据
-$r->import($data);
+    $r->import($data);
 最后，调用规则
-$r->execute(‘规则名称’);
+    $r->execute(‘规则名称’);
 
 
 ##三、实战
 一个电商网站每天产生很多订单，全国有两个仓库，规则1：北京的订单需要分配到北京仓，规则2：上海的订单需要分配到上海仓。规则3：上海的订单大于100的减10块运费；北京的订单小于90元的把用户ID标记在地址前面。
-DRL文件：order.drl
-##订单分配逻辑
-rule AssignOrder
-when
-    $address contains 北京 or $address contains 北京市;
-then
-    $user:order(mihome=北京仓)
+    DRL文件：order.drl
+    ##订单分配逻辑
+    rule AssignOrder
+    when
+        $address contains 北京 or $address contains 北京市;
+    then
+        $user:order(mihome=北京仓)
+    when 
+        $address contains 上海
+    then
+        $user:order(mihome=上海仓)    
     
-when 
-    $address contains 上海
-then
-    $user:order(mihome=上海仓)    
-    
-when 
-    $user:order(mihome==上海仓);$user:order(price>100)
-then
-    $user:order(price=$user:order:price-10)
+    when 
+        $user:order(mihome==上海仓);$user:order(price>100)
+    then
+        $user:order(price=$user:order:price-10)
 
-when
-    $user:order(mihome==北京仓);$user:order(price<90)
-then
-    $address=$user:order:id . $address
-end
+    when
+        $user:order(mihome==北京仓);$user:order(price<90)
+    then
+        $address=$user:order:id . $address
+    end
 
 测试数据1：
-        $data = array(
-            'user' => array(
-                'order' => array(
-                    'order_id'=>1016,
-                    'id' => 8888,
-                    'name' => 'zhangsan',
-                    'price' => 200,
-                    'mihome'=>'',
-                    )
+    $data = array(
+        'user' => array(
+            'order' => array(
+                'order_id'=>1016,
+                'id' => 8888,
+                'name' => 'zhangsan',
+                'price' => 200,
+                'mihome'=>'',
+                )
             ),
             'address' => "北京市朝阳区",
-);
+    );
 
 
 执行结果前后对比1：
 执行前
-Array
-(
-    [user] => Array
+    Array
+    (
+        [user] => Array
         (
             [order] => Array
                 (
@@ -164,15 +137,13 @@ Array
                     [price] => 200
                     [mihome] => 
                 )
-
         )
-
     [address] => 北京市朝阳区
-)
+    )
 
 执行2
-Array
-(
+    Array
+    (
     [user] => Array
         (
             [order] => Array
@@ -183,31 +154,29 @@ Array
                     [price] => 190
                     [mihome] => 北京仓
                 )
-
         )
-
     [address] => 北京市朝阳区
-)
+    )
 
 测试数据2：
-        $data = array(
-            'user' => array(
-                'order' => array(
-                    'order_id'=>1017,
-                    'id' => 6666,
-                    'name' => 'lisi',
-                    'price' => 18,
-                    'mihome'=>'',
-                    )
-            ),
-            'address' => "上海市徐汇区",
-        );
+    $data = array(
+        'user' => array(
+            'order' => array(
+                'order_id'=>1017,
+                'id' => 6666,
+                'name' => 'lisi',
+                'price' => 18,
+                'mihome'=>'',
+            )
+        ),
+        'address' => "上海市徐汇区",
+    );
 
 
 执行结果前后对比2：
 执行前
-Array
-(
+    Array
+    (
     [user] => Array
         (
             [order] => Array
@@ -218,16 +187,14 @@ Array
                     [price] => 18
                     [mihome] => 
                 )
-
         )
-
     [address] => 上海市徐汇区
-)
+    )
 
 
 执行后
-Array
-(
+    Array
+    (
     [user] => Array
         (
             [order] => Array
@@ -238,13 +205,8 @@ Array
                     [price] => 18
                     [mihome] => 上海仓
                 )
-
         )
-
     [address] => 6666上海市徐汇区
-)
+    )
 
 
-BTW:X5项目里有完整的测试代码：
-执行：php -f x5c.php Test Test14
-传送门：micode@micode.be.xiaomi.com:zhangtao/x5.git
