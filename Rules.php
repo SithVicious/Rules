@@ -40,7 +40,7 @@ class Rules {
         $lastType = '';
         foreach ($lines as $line) {
             $line = trim($line);
-            if(empty($line)){
+            if (empty($line)) {
                 continue;
             }
             //跳过注释
@@ -55,6 +55,8 @@ class Rules {
                 }
                 $currentRuleName = trim($commands[1]);
                 $this->rulesMap[$currentRuleName][$i] = array();
+                $lastType = '';
+                continue;
             }
             //当前 $currentRuleName 为空时,跳过后续的语法
             if ($commands[0] == 'when' and $currentRuleName) {
@@ -89,6 +91,7 @@ class Rules {
                 $lastType = 'then';
             }
         }
+
         //将map进一步拆解为条件
         foreach ($this->rulesMap as $ruleName => $actions) {
             foreach ($actions as $idx => $act) {
@@ -112,6 +115,7 @@ class Rules {
             throw new Exception($ruleName . ':' . $this->errorsCode[self::E_RULENAMENOTEXISTS], self::E_RULENAMENOTEXISTS);
         }
         $rulesList = $this->rules[$ruleName];
+
 
         foreach ($rulesList as $idx => $rules) {
             $flag = FALSE;
@@ -218,7 +222,7 @@ class Rules {
                 $value = trim($matchs[0][3]);
                 if (substr($value, 0, 1) == '$') {
                     //$value = $this->getMapValue(explode(':', substr($value, 1)), $this->data);
-                    $value = $this->getTureValue($value,$this->data);
+                    $value = $this->getTureValue($value, $this->data);
                 }
                 $this->data[$key] = $value;
             }
@@ -344,7 +348,8 @@ class Rules {
     }
 
     private function counting($object, $rule) {
-        if (!isset($this->mapData[$object])) {
+        //if (!isset($this->mapData[$object])) {
+        if (!key_exists($object, $this->mapData)) {
             throw new Exception($object . ':' . $this->errorsCode[self::E_KEYEXISTS], self::E_KEYEXISTS);
         }
         if ($rule['type'] == 'sub') {
@@ -405,7 +410,7 @@ class Rules {
      */
     private function getMapValue($methods, $data) {
         foreach ($methods as $kv) {
-            if (isset($data[$kv])) {
+            if (key_exists($kv, $data)) {
                 $data = $data[$kv];
                 continue;
             } else {
