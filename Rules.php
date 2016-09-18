@@ -216,7 +216,6 @@ class Rules {
                     $rs[$key] = $value;
                 }
             } else {
-
                 //对象赋值
                 $key = trim($matchs[0][1]);
                 $value = trim($matchs[0][3]);
@@ -259,7 +258,7 @@ class Rules {
             } else {
                 $val2 = trim($arr[0][5]);
             }
-            //var_dump($val2);
+
             $ret = null;
             switch (trim($arr[0][3])) {
                 case '+':
@@ -301,13 +300,13 @@ class Rules {
                 continue;
             }
             //var_dump($value);
-            preg_match_all("#\\\$([\w|:]+)([\s|(|!=]+)(.+)#iu", $value, $matchs, PREG_SET_ORDER); //
-
+            preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $value, $matchs, PREG_SET_ORDER);
             $object = $matchs[0][1];
             $tag = $matchs[0][2];
             $rules[$object] = array();
             $rules[$object]['or'] = array();
             $rules[$object]['and'] = array();
+
             if ($tag == '(') {
                 //带多个子条件的运算
                 $conditions = explode(',', preg_replace("/\)$/i", '', $matchs[0][3]));
@@ -319,7 +318,6 @@ class Rules {
                             continue;
                         }
                         $dd = array();
-
                         preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $orc, $dd, PREG_SET_ORDER);
                         if (!isset($dd[0][3])) {
                             //比较运算符错误
@@ -331,7 +329,7 @@ class Rules {
                 }
             } else {
                 //直接运算
-                $orconditions = explode('or', $matchs[0][0]);
+                $orconditions = explode(' or ', $matchs[0][0]);
                 $orFlag = count($orconditions) > 1 ? TRUE : FALSE;
                 foreach ($orconditions as $orc) {
                     if (empty($orc)) {
@@ -340,6 +338,7 @@ class Rules {
                     $dd = array();
                     preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $orc, $dd, PREG_SET_ORDER);
                     $flag = $orFlag ? "or" : "and";
+
                     $rules[$object][$flag][] = array('key' => $dd[0][1], 'opr' => $dd[0][2], 'val' => trim($dd[0][3]), 'type' => 'self');
                 }
             }
@@ -383,6 +382,7 @@ class Rules {
                 $ret = $this->_equal($srcVal, $value);
                 break;
             case '!=':
+
                 $ret = $this->_equal($srcVal, $value, TRUE);
                 break;
             case 'memberof':
@@ -460,10 +460,11 @@ class Rules {
      * @return bool
      */
     private function _equal($srcVal, $value, $isNot = FALSE) {
+        $srcVal = is_string($srcVal) ? trim($srcVal) : $srcVal;
         if ($isNot) {
-            return trim($srcVal) != $value;
+            return $srcVal != $value;
         } else {
-            return trim($srcVal) == $value;
+            return $srcVal == $value;
         }
     }
 
