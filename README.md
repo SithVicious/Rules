@@ -1,4 +1,4 @@
-PHP简易规则引擎
+:cn:PHP简易规则引擎
 ============================
 使用说明书(2016-08-11)
 Tony.zhang
@@ -236,7 +236,7 @@ $绑定变量(元素名 操作符 值[,或or]…)，或者：$绑定变量操作
     )
 
 
-PHP Simple Rule Engine
+:uk:PHP Simple Rule Engine
 ============================
 User's manual (2016-08-11)
 Tony.zhang
