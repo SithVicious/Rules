@@ -1,4 +1,4 @@
-PHP简易规则引擎
+:cn:PHP简易规则引擎
 ============================
 使用说明书(2016-08-11)
 Tony.zhang
@@ -234,5 +234,246 @@ $绑定变量(元素名 操作符 值[,或or]…)，或者：$绑定变量操作
         )
     [address] => 6666上海市徐汇区
     )
+
+
+:uk:PHP Simple Rule Engine
+============================
+User's manual (2016-08-11)
+Tony.zhang
+----------------------------
+What is a rule engine
+
+    Not much to say if you can Google. Simply put, it is to perform defined actions by parsing rules that are easier to define, including: reassigning values and calling custom functions. For businesses that have a lot of logic in the back-end, the rule engine can save development time and reduce maintenance costs. JAVA has many implementations, but PHP seems to have not been implemented yet, so I made this wheel.
+      
+##1. Rule definition
+
+**1.Keywords**
+There are very few keywords, only five: rule when then end call
+
+rule: Define the name of the rule, such as rule rulename
+
+when: The triggering condition of the rule, which means that all subsequent lines are conditional statements, and when needs to occupy a separate line.
+
+then: the result statement of the rule, which means that all subsequent lines will be executed sequentially
+
+call: specify a function to be executed in the result statement
+
+end: the end tag of a rule definition
+
+Rules can be defined in one file, and one rule file can define multiple rules. If multiple rule files have the same rule name, the last rule will overwrite the previous rule.
+
+/ And # are used to comment
+
+*2. Grammar*
+Rule name definition: The keyword rule and the rule name are separated by a space and occupy one line.
+
+Conditional statement (statement after when): The conditional object starts with $ and is composed of letters, numbers or underscores, such as $user. The syntax is:
+$Bind variable (element name operator value [, or or]...), or: $Bind variable operator value [, or or]....
+Each condition object will bind a PHP variable. Use ":" to denote multi-dimensional associative array elements. For example, $user:order will be bound to $user[‘order’], and so on. () means multiple elements in this array, such as: $user(id==100,name==Tony); $order(price>100). Multiple conditions are separated by ";", and the relationship between multiple conditions is AND operation. For example, the meaning of the previous example is: if the member id of the $user array is equal to 100 and the name is equal to Tony, and the member price of the $order is greater than 100, the condition is met.
+
+Result sentence (sentence after then): The result sentence can re-assign the user input data or call user-defined functions. The reassignment syntax is: $bind variable (member=new value,...); such as: $user:card(name=newName,id=$newid). The syntax for calling a custom function is: call (function/method name, parameter one, parameter two...). If you want to call a custom method of a certain class, for example, connect the class name and method name with ->. Such as call(ClassName->method, $user:card,1); as in the above example, the parameter can be a new bind variable. The current result statement can refer to the bind variable assigned by the previous result statement.
+The operator "+-* / %" and the string concatenator "." are supported when assigning the result statement. The string concatenator only supports the concatenation of two variables.
+
+Code example:
+
+    ##warehouse.drl
+    //Sub-express
+    rule AssignExpress 
+    when
+        $address contains Beijing;$user:card(name==zhangtao,id not memberof $userids);
+    then
+        $user:card(name=tony,id=new);call(TestCommand->doTest15, $user:card,1,haha);
+    end
+    #Sub-warehouse
+    rule AssignWarehouse
+    when
+        $user(name==zhangtao,);$order(goods_amount>100)
+    then
+        $order(mihome_id=120)
+    end
+
+
+*3. Operator*
+
+This rule engine supports the following operators:
+
+     Operator Description Remark
+     ==                      Equals
+     >                       Greater than
+     <                       Less than
+     >=                      Greater than or equal
+     <=                      Less than or equal to
+     !=                      Not equal
+     Memberof                Belongs to the operation object can be an array, object or string
+     Not memberof            Does not belong to the operation object can be an array, object or string
+     Contains                Contains the operation object can be an array, object or string
+     Not contains            Does not contain the operation object can be an array, object or string
+     =                       Assignment is only used in the result statement
+
+
+*4. Error code definition*
+
+    $errorsCode = 【
+        '41000' => 'Data\'s key is not exists',
+        '41001' => 'Value is not an array',
+        '41002' => 'Rule file format error:Rule name is not difined',
+        '41003' => 'Rule name is not exists',
+        '41004' => 'Value\'s format is wrong',
+        '41005' => 'Error operator',
+        '41006' => 'Operator is wrong.The right operator are:== != > < >= <= , memberof , contains , not memberof , not contains',】
+
+##2. Getting started
+First, you need to reference the rule engine class, for the x5 project, as follows
+
+    x5()->import("lib/Rules.php");
+    $r = new Rules();
+
+Non-x5 items, you can
+
+    include "Rules.php";
+    $r = new Rules();
+
+Next: Initialize the rules file
+
+    $r->initRulesMap("warehouse.drl");
+Then, enter the data to be judged
+
+    $r->import($data);
+Finally, call the rules
+
+    $r->execute(‘Rule name’);
+
+
+##3. Actual combat
+An e-commerce website generates many orders every day. There are two warehouses nationwide. Rule 1: Beijing orders need to be allocated to the Beijing warehouse, and rule 2: Shanghai orders need to be allocated to the Shanghai warehouse. Rule 3: Shanghai orders greater than 100 minus 10 yuan shipping; Beijing orders less than 90 yuan, mark the user ID in front of the address.
+
+    DRL File：order.drl
+    ##Order allocation logic
+    rule AssignOrder
+    when
+        $address contains Beijing;
+    then
+        $user:order(mihome=Beijing warehouse)
+    when 
+        $address contains Shanghai
+    then
+        $user:order(mihome=Shanghai warehouse)    
+    when 
+        $user:order(mihome==Shanghai warehouse);$user:order(price>100)
+    then
+        $user:order(price=$user:order:price-10)
+    when
+        $user:order(mihome==Beijing warehouse);$user:order(price<90)
+    then
+        $address=$user:order:id . $address
+    end
+
+Test data 1
+
+    $data = array(
+        'user' => array(
+            'order' => array(
+                'order_id'=>1016,
+                'id' => 8888,
+                'name' => 'zhangsan',
+                'price' => 200,
+                'mihome'=>'',
+                )
+            ),
+            'address' => "Chaoyang District, Beijing",
+    );
+
+
+Comparison of the results before and after 1:
+Before execution
+
+    Array
+    (
+        [user] => Array
+        (
+            [order] => Array
+                (
+                    [order_id] => 1016
+                    [id] => 8888
+                    [name] => zhangsan
+                    [price] => 200
+                    [mihome] => 
+                )
+        )
+    [address] => Chaoyang District, Beijing
+    )
+
+Execute 2
+
+    Array
+    (
+    [user] => Array
+        (
+            [order] => Array
+                (
+                    [order_id] => 1016
+                    [id] => 8888
+                    [name] => zhangsan
+                    [price] => 190
+                    [mihome] => Beijing warehouse
+                )
+        )
+    [address] => Chaoyang District, Beijing
+    )
+
+Test data 2:
+
+    $data = array(
+        'user' => array(
+            'order' => array(
+                'order_id'=>1017,
+                'id' => 6666,
+                'name' => 'lisi',
+                'price' => 18,
+                'mihome'=>'',
+            )
+        ),
+        'address' => "Xuhui District, Shanghai",
+    );
+
+
+Comparison of the results before and after 2:
+Before execution
+
+    Array
+    (
+    [user] => Array
+        (
+            [order] => Array
+                (
+                    [order_id] => 1017
+                    [id] => 6666
+                    [name] => lisi
+                    [price] => 18
+                    [mihome] => 
+                )
+        )
+    [address] => Xuhui District, Shanghai
+    )
+
+
+After execution
+
+    Array
+    (
+    [user] => Array
+        (
+            [order] => Array
+                (
+                    [order_id] => 1017
+                    [id] => 6666
+                    [name] => lisi
+                    [price] => 18
+                    [mihome] => Shanghai warehouse
+                )
+        )
+    [address] => 6666 Xuhui District, Shanghai
+    )
+
 
 

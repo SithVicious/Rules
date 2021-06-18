@@ -1,4 +1,5 @@
 ##订单分配逻辑
+##Order allocation logic
 rule AssignOrder
 when
     $address contains 北京 or $address contains 北京市;

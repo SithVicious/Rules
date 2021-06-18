@@ -40,10 +40,11 @@ class Rules {
         $lastType = '';
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) {
+            if(empty($line)){
                 continue;
             }
             //跳过注释
+	        //Skip comment
             $firstLetter = substr($line, 0, 1);
             if ($firstLetter == '/' or $firstLetter == '#') {
                 continue;
@@ -55,28 +56,30 @@ class Rules {
                 }
                 $currentRuleName = trim($commands[1]);
                 $this->rulesMap[$currentRuleName][$i] = array();
-                $lastType = '';
-                continue;
             }
-            //当前 $currentRuleName 为空时,跳过后续的语法
+	        //当前 $currentRuleName 为空时,跳过后续的语法
+	        //When the current $currentRuleName is empty, skip the subsequent syntax
             if ($commands[0] == 'when' and $currentRuleName) {
-                //标记后续语句为规则语句
+                //Mark subsequent statements as regular statements
                 $type = "when";
-                //一个规则里可以有多个when-then嵌套
+                //There can be multiple when-then nesting in a rule
                 if ($lastType == 'then') {
                     $i++;
                 }
                 continue;
             }
-            //标记后续语句为 then
+	        //标记后续语句为 then
+	        //Mark the subsequent statement as then
             if ($commands[0] == 'then' and $currentRuleName) {
                 //标记后续语句为规则语句
                 $type = "then";
                 continue;
             }
-            //end表明此规则结束
+	        //end表明此规则结束
+            //end indicates the end of this rule
             if ($commands[0] == 'end' and $currentRuleName) {
-                //标记后续语句为规则语句
+	            //标记后续语句为规则语句
+	            //Mark subsequent statements as regular statements
                 $type = '';
                 $lastType = '';
                 $currentRuleName = '';
@@ -91,8 +94,8 @@ class Rules {
                 $lastType = 'then';
             }
         }
-
-        //将map进一步拆解为条件
+	    //将map进一步拆解为条件
+        //Disassemble the map further into conditions
         foreach ($this->rulesMap as $ruleName => $actions) {
             foreach ($actions as $idx => $act) {
                 $ruleString = implode(';', $act['when']);
@@ -115,7 +118,6 @@ class Rules {
             throw new Exception($ruleName . ':' . $this->errorsCode[self::E_RULENAMENOTEXISTS], self::E_RULENAMENOTEXISTS);
         }
         $rulesList = $this->rules[$ruleName];
-
 
         foreach ($rulesList as $idx => $rules) {
             $flag = FALSE;
@@ -141,7 +143,8 @@ class Rules {
                         $flag = TRUE;
                     }
                 }
-                //每规则间是and关系,所以只要有一个false,则全部false
+	            //每规则间是and关系,所以只要有一个false,则全部false
+                //Each rule is an and relationship, so as long as there is one false, all are false
                 if (!$flag) {
                     break;
                 }
@@ -166,15 +169,18 @@ class Rules {
             $actionString = trim($value);
             preg_match_all("#\\\$([\w|:]+)([\s(=]+)(.+)#i", $value, $matchs, PREG_SET_ORDER);
             //var_dump($matchs);
-            //三种情况:直接将一个对象赋值;将对象的一个属性赋值;调用用户自定义函数
+	        //三种情况:直接将一个对象赋值;将对象的一个属性赋值;调用用户自定义函数
+            //Three cases: directly assign an object; assign an attribute of the object; call a user-defined function
             $fourLetters = substr($actionString, 0, 4);
             if ($fourLetters == 'call' or $fourLetters == 'CALL') {
-                //自定义函数
+	            //自定义函数
+                //Custom function
                 $params = array();
                 preg_match_all("#call\(\s*(.+)\s*\)#i", $actionString, $params, PREG_SET_ORDER);
                 $list = explode(',', $params[0][1]);
                 $methodParams = array_slice($list, 1);
-                //$methodParams 有变量的,需要计算出变量值
+	            //$methodParams 有变量的,需要计算出变量值
+                //$methodParams has variables, you need to calculate the value of the variable
                 if (stristr($list[0], '->') !== false) {
                     $funcArr = explode('->', $list[0]);
                     $className = $funcArr[0];
@@ -195,7 +201,8 @@ class Rules {
                 }
                 //var_dump($methodParams);
             } elseif (isset($matchs[0][2]) and trim($matchs[0][2]) == '(') {
-                //属性赋值
+	            //属性赋值
+                //Attribute assignment
                 $keysPath = explode(':', $matchs[0][1]);
                 foreach ($keysPath as $i => $key) {
                     if ($i == 0)
@@ -217,11 +224,12 @@ class Rules {
                 }
             } else {
                 //对象赋值
+                //Object assignment
                 $key = trim($matchs[0][1]);
                 $value = trim($matchs[0][3]);
                 if (substr($value, 0, 1) == '$') {
                     //$value = $this->getMapValue(explode(':', substr($value, 1)), $this->data);
-                    $value = $this->getTureValue($value, $this->data);
+                    $value = $this->getTureValue($value,$this->data);
                 }
                 $this->data[$key] = $value;
             }
@@ -229,6 +237,8 @@ class Rules {
     }
 
     //判断一个值字符串是否需要进行运算(当值字符串中含有数学运算符时且含有变量时),如果是,返回运算后结果,否则返回原值
+	//Determine whether a value string needs to be operated (when the value string contains mathematical operators and variables),
+	// if yes, return the result of the operation, otherwise return the original value
     private function getTureValue($valueString) {
         $valueString = trim($valueString);
         if (stristr($valueString, '$') === FALSE) {
@@ -238,6 +248,7 @@ class Rules {
             preg_match_all("#(\\\$*)([\w:]+)\s*([+-\/%]|\*|\.)\s*(\\\$*)([\w:]+)#i", $valueString, $arr, PREG_SET_ORDER);
             //var_dump($arr);
             //直接赋值给一个变量,非变量运算
+	        //Assign value directly to a variable, non-variable operation
             if (!isset($arr[0][5])) {
                 if (substr($valueString, 0, 1) == '$') {
                     return $this->getMapValue(explode(':', substr($valueString, 1)), $this->data);
@@ -248,17 +259,19 @@ class Rules {
 
             if (trim($arr[0][1]) == '$') {
                 //第一个值是变量
+	            //The first value is the variable
                 $val1 = $this->getMapValue(explode(':', trim($arr[0][2])), $this->data);
             } else {
                 $val1 = trim($arr[0][2]);
             }
             if (trim($arr[0][4]) == '$') {
                 //第一个值是变量
+	            //The first value is the variable
                 $val2 = $this->getMapValue(explode(':', trim($arr[0][5])), $this->data);
             } else {
                 $val2 = trim($arr[0][5]);
             }
-
+            //var_dump($val2);
             $ret = null;
             switch (trim($arr[0][3])) {
                 case '+':
@@ -287,6 +300,7 @@ class Rules {
     }
 
     //获取一个指向数组元素的引用
+	//Get a reference to an array element
     private function & findArrByKey($key, & $arr) {
         return $arr[$key];
     }
@@ -300,15 +314,16 @@ class Rules {
                 continue;
             }
             //var_dump($value);
-            preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $value, $matchs, PREG_SET_ORDER);
+            preg_match_all("#\\\$([\w|:]+)([\s|(|!=]+)(.+)#iu", $value, $matchs, PREG_SET_ORDER); //
+
             $object = $matchs[0][1];
             $tag = $matchs[0][2];
             $rules[$object] = array();
             $rules[$object]['or'] = array();
             $rules[$object]['and'] = array();
-
             if ($tag == '(') {
                 //带多个子条件的运算
+	            //Operation with multiple sub-conditions
                 $conditions = explode(',', preg_replace("/\)$/i", '', $matchs[0][3]));
                 foreach ($conditions as $c) {
                     $orconditions = explode('or', $c);
@@ -318,9 +333,11 @@ class Rules {
                             continue;
                         }
                         $dd = array();
+
                         preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $orc, $dd, PREG_SET_ORDER);
                         if (!isset($dd[0][3])) {
                             //比较运算符错误
+	                        //Comparison operator error
                             throw new Exception($orc . ':' . $this->errorsCode[self::E_OPERATOR], self::E_OPERATOR);
                         }
                         $flag = $orFlag ? "or" : "and";
@@ -329,7 +346,8 @@ class Rules {
                 }
             } else {
                 //直接运算
-                $orconditions = explode(' or ', $matchs[0][0]);
+	            //Direct calculation
+                $orconditions = explode('or', $matchs[0][0]);
                 $orFlag = count($orconditions) > 1 ? TRUE : FALSE;
                 foreach ($orconditions as $orc) {
                     if (empty($orc)) {
@@ -338,7 +356,6 @@ class Rules {
                     $dd = array();
                     preg_match_all("#([\w]+)\s*(MEMBEROF|==|!=|>=|<=|>|<|NOT MEMBEROF|CONTAINS|NOT CONTAINS)\s*(.*)#i", $orc, $dd, PREG_SET_ORDER);
                     $flag = $orFlag ? "or" : "and";
-
                     $rules[$object][$flag][] = array('key' => $dd[0][1], 'opr' => $dd[0][2], 'val' => trim($dd[0][3]), 'type' => 'self');
                 }
             }
@@ -347,8 +364,7 @@ class Rules {
     }
 
     private function counting($object, $rule) {
-        //if (!isset($this->mapData[$object])) {
-        if (!key_exists($object, $this->mapData)) {
+        if (!isset($this->mapData[$object])) {
             throw new Exception($object . ':' . $this->errorsCode[self::E_KEYEXISTS], self::E_KEYEXISTS);
         }
         if ($rule['type'] == 'sub') {
@@ -382,7 +398,6 @@ class Rules {
                 $ret = $this->_equal($srcVal, $value);
                 break;
             case '!=':
-
                 $ret = $this->_equal($srcVal, $value, TRUE);
                 break;
             case 'memberof':
@@ -405,12 +420,13 @@ class Rules {
 
     /**
      * 将数据映射到绑定变量上
-     * @param array $methods eg. array('user','card') 对应user:card
+     * Map data to bind variables
+     * @param array $methods eg. array('user','card') 对应user:card / Corresponding to user:card
      * @param array $data object's data
      */
     private function getMapValue($methods, $data) {
         foreach ($methods as $kv) {
-            if (key_exists($kv, $data)) {
+            if (isset($data[$kv])) {
                 $data = $data[$kv];
                 continue;
             } else {
@@ -422,6 +438,8 @@ class Rules {
 
     /**
      * 解析rule里要比较的值是否是变量,如果是变量,取得其变量值,否则取其本身值
+     * Analyze whether the value to be compared in the rule is a variable,
+     * if it is a variable, get its variable value, otherwise take its own value
      * @param string $val
      * @return mix
      */
@@ -438,6 +456,7 @@ class Rules {
 
     /**
      * 在data里查找keys链上的键的值
+     * Find the value of the key on the keys chain in data
      * @param type $keys
      * @param type $data
      */
@@ -454,25 +473,26 @@ class Rules {
 
     /**
      * 等于和不等于计算
-     * @param type $srcVal 要计算的源值
-     * @param type $value 要计算的目标值
-     * @param type $isNot 不等于开关
+     * Equal and unequal calculation
+     * @param type $srcVal 要计算的源值 / Source value to be calculated
+     * @param type $value 要计算的目标值 / Target value to be calculated
+     * @param type $isNot 不等于开关 / Not equal to switch
      * @return bool
      */
     private function _equal($srcVal, $value, $isNot = FALSE) {
-        $srcVal = is_string($srcVal) ? trim($srcVal) : $srcVal;
         if ($isNot) {
-            return $srcVal != $value;
+            return trim($srcVal) != $value;
         } else {
-            return $srcVal == $value;
+            return trim($srcVal) == $value;
         }
     }
 
     /**
      * 大于等于和小于等于计算
-     * @param type $srcVal 要计算的源值
-     * @param type $value 要计算的目标值
-     * @param type $isNot 小于等于开关
+     * Greater than or equal to and less than or equal to calculation
+     * @param type $srcVal 要计算的源值 / Source value to be calculated
+     * @param type $value 要计算的目标值 / Target value to be calculated
+     * @param type $isNot 小于等于开关/ Less than or equal to switch
      * @return bool
      */
     private function _greaterThanEqual($srcVal, $value, $isNot = FALSE) {
@@ -485,9 +505,10 @@ class Rules {
 
     /**
      * 大于和小于计算
-     * @param type $srcVal 要计算的源值
-     * @param type $value 要计算的目标值
-     * @param type $isNot 小于开关
+     * Greater than and less than calculation
+     * @param type $srcVal 要计算的源值 / Source value to be calculated
+     * @param type $value 要计算的目标值 / Target value to be calculated
+     * @param type $isNot 小于开关 / Less than switch
      * @return bool
      */
     private function _greaterThan($srcVal, $value, $isNot = FALSE) {
@@ -500,13 +521,16 @@ class Rules {
 
     /**
      * 判断一个对象是否属于某对象,一个字符串是否属于另一个字符吅
-     * @param mix $srcVal 源对象
-     * @param mix $value 判断源对象是否存在于此对象
-     * @param bool $isNot 不属于开关
+     * Determine whether an object belongs to an object, and whether a string belongs to another character
+     * @param mix $srcVal 源对象 / Source object
+     * @param mix $value 判断源对象是否存在于此对象 / Determine whether the source object exists in this object
+     * @param bool $isNot 不属于开关 / Not part of the switch
      * @return bool
      */
     private function _memberof($srcVal, $value, $isNot = FALSE) {
         //value是一个数组,则判断其值是否是其一个元素,如果是字符串,则判断是否存在于value中
+	    //If value is an array, it is judged whether its value is one of its elements,
+	    // and if it is a string, it is judged whether it exists in value
         if (is_array($value)) {
             if ($isNot) {
                 return !in_array($srcVal, $value);
@@ -524,13 +548,15 @@ class Rules {
 
     /**
      * 判断一个对象是否包含某元素,一个字符串是否包含有另一个字符吅
-     * @param mix $srcVal 源对象
-     * @param mix $value 判断是否存在于源对象的元素
-     * @param bool $isNot 不包含开关
+     * Determine whether an object contains a certain element, whether a string contains another character
+     * @param mix $srcVal 源对象 / Source object
+     * @param mix $value 判断是否存在于源对象的元素 / Determine whether the element exists in the source object
+     * @param bool $isNot 不包含开关 / Does not include switch
      * @return bool
      */
     private function _contains($srcVal, $value, $isNot = FALSE) {
         //value是一个数组,则判断其值是否是其一个元素,
+	    //value is an array, then judge whether its value is one of its elements,
         if (is_array($value)) {
             if ($isNot) {
                 return !in_array($value, $srcVal);
